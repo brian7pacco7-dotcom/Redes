@@ -1,0 +1,80 @@
+name: Build APK from ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Buscar ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No se encontró ningún ZIP en la raíz del repositorio."
+            exit 1
+          fi
+
+          echo "ZIP encontrado: $ZIP_FILE"
+          echo "ZIP_FILE=$ZIP_FILE" >> $GITHUB_ENV
+
+      - name: Descomprimir ZIP
+        run: |
+          mkdir extracted_project
+          unzip "$ZIP_FILE" -d extracted_project
+          ls -la extracted_project
+
+      - name: Buscar proyecto Android
+        run: |
+          PROJECT_DIR=$(find extracted_project -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1 | xargs dirname)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "No se encontró settings.gradle ni settings.gradle.kts."
+            exit 1
+          fi
+
+          echo "Proyecto encontrado en: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+      - name: Dar permiso a Gradle
+        run: |
+          cd "$PROJECT_DIR"
+          chmod +x ./gradlew
+
+      - name: Compilar APK
+        run: |
+          cd "$PROJECT_DIR"
+          ./gradlew assembleDebug
+
+      - name: Guardar APK
+        run: |
+          APK_FILE=$(find "$PROJECT_DIR" -name "*.apk" | head -n 1)
+
+          if [ -z "$APK_FILE" ]; then
+            echo "No se generó ningún APK."
+            exit 1
+          fi
+
+          mkdir final_apk
+          cp "$APK_FILE" final_apk/BPH-Publisher-HD-debug.apk
+
+      - name: Subir APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BPH-Publisher-HD-debug-apk
+          path: final_apk/BPH-Publisher-HD-debug.apk
