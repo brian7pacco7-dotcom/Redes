@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Geo Redes OAuth</title>
+</head>
+<body>
+  <p>Volviendo a Geo Redes...</p>
+
+  <script>
+    const query = window.location.search || "";
+    const hash = window.location.hash || "";
+    window.location.href = "georedes://oauth/tiktok" + query + hash;
+  </script>
+</body>
+</html>
